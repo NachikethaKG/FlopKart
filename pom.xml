@@ -32,6 +32,7 @@
     <modules>
         <module>common-dto</module>
         <module>eureka-server</module>
+        <module>api-gateway</module>
     </modules>
 
     <dependencyManagement>
@@ -63,6 +64,11 @@
             <dependency>
                 <groupId>com.flopkart</groupId>
                 <artifactId>eureka-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.flopkart</groupId>
+                <artifactId>api-gateway</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
