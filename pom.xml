@@ -38,6 +38,7 @@
         <module>api-gateway</module>
         <module>product-service</module>
         <module>user-service</module>
+        <module>cart-service</module>
     </modules>
 
     <dependencyManagement>
@@ -86,6 +87,11 @@
                 <artifactId>user-service</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.flopkart</groupId>
+                <artifactId>cart-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- JJWT Dependencies -->
             <dependency>
@@ -124,6 +130,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
