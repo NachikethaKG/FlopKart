@@ -27,6 +27,9 @@
         <!-- Plugin Versions -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+
+        <!-- JJWT Version -->
+        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
     <modules>
@@ -34,6 +37,7 @@
         <module>eureka-server</module>
         <module>api-gateway</module>
         <module>product-service</module>
+        <module>user-service</module>
     </modules>
 
     <dependencyManagement>
@@ -76,6 +80,30 @@
                 <groupId>com.flopkart</groupId>
                 <artifactId>product-service</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.flopkart</groupId>
+                <artifactId>user-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- JJWT Dependencies -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
