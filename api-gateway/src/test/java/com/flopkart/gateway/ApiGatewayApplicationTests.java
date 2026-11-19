@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -75,5 +76,44 @@ class ApiGatewayApplicationTests {
                 .header("Access-Control-Request-Method", "GET")
                 .exchange()
                 .expectStatus().isForbidden();
+    }
+
+    @Test
+    @DisplayName("Accessing protected /api/v1/cart without token returns 401 Unauthorized")
+    void cartWithoutTokenReturns401() {
+        webTestClient.get()
+                .uri("http://localhost:" + port + "/api/v1/cart")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.status").isEqualTo(401)
+                .jsonPath("$.message").isEqualTo("Missing or invalid Authorization header");
+    }
+
+    @Test
+    @DisplayName("Accessing protected /api/v1/cart with invalid token returns 401 Unauthorized")
+    void cartWithInvalidTokenReturns401() {
+        webTestClient.get()
+                .uri("http://localhost:" + port + "/api/v1/cart")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer bogus.token.xyz")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.status").isEqualTo(401)
+                .jsonPath("$.message").isEqualTo("Invalid or expired JWT token");
+    }
+
+    @Test
+    @DisplayName("Accessing POST /api/v1/products without token returns 401 Unauthorized")
+    void postProductsWithoutTokenReturns401() {
+        webTestClient.post()
+                .uri("http://localhost:" + port + "/api/v1/products")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(false)
+                .jsonPath("$.status").isEqualTo(401);
     }
 }
