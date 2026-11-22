@@ -2,14 +2,18 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Package, LogOut, Menu, X, Sparkles, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
-export default function Navbar({ cartCount = 0 }) {
+export default function Navbar({ cartCount = null }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const { user, logout } = useAuth();
+  const { totalItemCount } = useCart();
+
+  const displayCartCount = cartCount !== null ? cartCount : totalItemCount;
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -75,9 +79,9 @@ export default function Navbar({ cartCount = 0 }) {
               aria-label="Shopping Cart"
             >
               <ShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
+              {displayCartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
-                  {cartCount}
+                  {displayCartCount}
                 </span>
               )}
             </Link>
@@ -151,9 +155,9 @@ export default function Navbar({ cartCount = 0 }) {
               aria-label="Shopping Cart"
             >
               <ShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
+              {displayCartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center">
-                  {cartCount}
+                  {displayCartCount}
                 </span>
               )}
             </Link>
