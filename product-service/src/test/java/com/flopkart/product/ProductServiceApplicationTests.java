@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "eureka.client.register-with-eureka=false",
-        "eureka.client.fetch-registry=false"
+        "eureka.client.fetch-registry=false",
+        "spring.kafka.listener.auto-startup=false"
 })
 class ProductServiceApplicationTests {
 
@@ -240,6 +241,24 @@ class ProductServiceApplicationTests {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Autowired
+    private com.flopkart.product.consumer.StockReleaseConsumer stockReleaseConsumer;
+
+    @Test
+    @DisplayName("StockReleaseConsumer restores stock on StockReleaseEvent")
+    void shouldRestoreStockOnStockReleaseEvent() {
+        com.flopkart.common.event.StockReleaseEvent event = new com.flopkart.common.event.StockReleaseEvent(
+                "ORD-SAGA-COMPENSATE",
+                java.util.List.of(new com.flopkart.common.event.OrderItemDto(testProduct.getId(), testProduct.getName(), 10, testProduct.getPrice())),
+                java.time.LocalDateTime.now()
+        );
+
+        stockReleaseConsumer.consumeStockReleaseEvent(event);
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(35, updated.getStockQuantity());
     }
 
     @Test
