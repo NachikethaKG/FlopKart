@@ -1,0 +1,296 @@
+services:
+  # ============================================================================
+  # Infrastructure Services
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: flopkart-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-flopkart_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    networks:
+      - flopkart-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: flopkart-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - flopkart-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: flopkart-kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: "4L622nShTUiBenYh_semester"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - flopkart-network
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: flopkart-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "flopkart-cluster"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:29092"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  # ============================================================================
+  # Discovery & Gateway Services
+  # ============================================================================
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    image: flopkart/eureka-server:latest
+    container_name: flopkart-eureka-server
+    restart: unless-stopped
+    ports:
+      - "${EUREKA_PORT:-8761}:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - flopkart-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: flopkart/api-gateway:latest
+    container_name: flopkart-api-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  # ============================================================================
+  # Domain Microservices
+  # ============================================================================
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    image: flopkart/user-service:latest
+    container_name: flopkart-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT:-8081}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/flopkart_user_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    image: flopkart/product-service:latest
+    container_name: flopkart-product-service
+    restart: unless-stopped
+    ports:
+      - "${PRODUCT_SERVICE_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/flopkart_product_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: cart-service/Dockerfile
+    image: flopkart/cart-service:latest
+    container_name: flopkart-cart-service
+    restart: unless-stopped
+    ports:
+      - "${CART_SERVICE_PORT:-8083}:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    image: flopkart/order-service:latest
+    container_name: flopkart-order-service
+    restart: unless-stopped
+    ports:
+      - "${ORDER_SERVICE_PORT:-8084}:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/flopkart_order_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    image: flopkart/payment-service:latest
+    container_name: flopkart-payment-service
+    restart: unless-stopped
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8085}:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/flopkart_payment_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PAYMENT_SIMULATE_FAILURE: ${PAYMENT_SIMULATE_FAILURE:-false}
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    image: flopkart/notification-service:latest
+    container_name: flopkart-notification-service
+    restart: unless-stopped
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8086}:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - flopkart-network
+
+# ==============================================================================
+# Networks & Persistent Named Volumes
+# ==============================================================================
+networks:
+  flopkart-network:
+    name: flopkart-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: flopkart_postgres_data
+  redis_data:
+    name: flopkart_redis_data
+  kafka_data:
+    name: flopkart_kafka_data
