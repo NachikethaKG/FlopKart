@@ -49,6 +49,12 @@ public class JwtUtil {
         return role != null ? role : "ROLE_USER";
     }
 
+    public String extractEmail(String token) {
+        Claims claims = extractAllClaims(token);
+        String email = claims.get("email", String.class);
+        return email != null ? email : claims.getSubject();
+    }
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);

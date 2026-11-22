@@ -37,6 +37,8 @@ public class OrderDto implements Serializable {
     @NotBlank(message = "Order status is required")
     private String status;
 
+    private String shippingAddress;
+
     @NotEmpty(message = "Order must have at least one item")
     @Valid
     private List<OrderItemDto> items;
@@ -107,6 +109,14 @@ public class OrderDto implements Serializable {
         this.status = status;
     }
 
+    public String getShippingAddress() {
+        return shippingAddress;
+    }
+
+    public void setShippingAddress(String shippingAddress) {
+        this.shippingAddress = shippingAddress;
+    }
+
     public List<OrderItemDto> getItems() {
         return items;
     }
@@ -171,6 +181,7 @@ public class OrderDto implements Serializable {
         private Long userId;
         private BigDecimal totalAmount;
         private String status;
+        private String shippingAddress;
         private List<OrderItemDto> items = new ArrayList<>();
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -200,6 +211,11 @@ public class OrderDto implements Serializable {
             return this;
         }
 
+        public Builder shippingAddress(String shippingAddress) {
+            this.shippingAddress = shippingAddress;
+            return this;
+        }
+
         public Builder items(List<OrderItemDto> items) {
             this.items = items != null ? items : new ArrayList<>();
             return this;
@@ -216,7 +232,9 @@ public class OrderDto implements Serializable {
         }
 
         public OrderDto build() {
-            return new OrderDto(id, orderNumber, userId, totalAmount, status, items, createdAt, updatedAt);
+            OrderDto dto = new OrderDto(id, orderNumber, userId, totalAmount, status, items, createdAt, updatedAt);
+            dto.setShippingAddress(shippingAddress);
+            return dto;
         }
     }
 }
