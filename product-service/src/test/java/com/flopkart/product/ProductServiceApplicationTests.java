@@ -188,4 +188,76 @@ class ProductServiceApplicationTests {
                 .andExpect(jsonPath("$.data.stockQuantity").value(25))
                 .andExpect(jsonPath("$.data.inStock").value(true));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/products/reserve-stock successfully deducts stock")
+    void shouldReserveStockSuccessfully() throws Exception {
+        com.flopkart.common.dto.product.StockReservationRequest request =
+                new com.flopkart.common.dto.product.StockReservationRequest(
+                        java.util.List.of(new com.flopkart.common.dto.product.StockItemDto(testProduct.getId(), 5))
+                );
+
+        mockMvc.perform(post("/api/v1/products/reserve-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Stock reserved successfully"));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(20, updated.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/products/reserve-stock returns 409 Conflict when stock is insufficient")
+    void shouldReturn409WhenStockInsufficient() throws Exception {
+        com.flopkart.common.dto.product.StockReservationRequest request =
+                new com.flopkart.common.dto.product.StockReservationRequest(
+                        java.util.List.of(new com.flopkart.common.dto.product.StockItemDto(testProduct.getId(), 100))
+                );
+
+        mockMvc.perform(post("/api/v1/products/reserve-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("Insufficient stock")));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(25, updated.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/products/reserve-stock returns 404 Not Found for nonexistent product")
+    void shouldReturn404WhenReservingNonexistentProduct() throws Exception {
+        com.flopkart.common.dto.product.StockReservationRequest request =
+                new com.flopkart.common.dto.product.StockReservationRequest(
+                        java.util.List.of(new com.flopkart.common.dto.product.StockItemDto(99999L, 1))
+                );
+
+        mockMvc.perform(post("/api/v1/products/reserve-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/products/release-stock restores stock quantity")
+    void shouldReleaseStockSuccessfully() throws Exception {
+        com.flopkart.common.dto.product.StockReleaseRequest request =
+                new com.flopkart.common.dto.product.StockReleaseRequest("ORD-12345",
+                        java.util.List.of(new com.flopkart.common.dto.product.StockItemDto(testProduct.getId(), 10))
+                );
+
+        mockMvc.perform(post("/api/v1/products/release-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Stock released successfully"));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(35, updated.getStockQuantity());
+    }
 }

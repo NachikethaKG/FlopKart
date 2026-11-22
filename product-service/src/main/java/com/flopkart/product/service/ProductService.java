@@ -2,13 +2,19 @@ package com.flopkart.product.service;
 
 import com.flopkart.common.dto.PageResponse;
 import com.flopkart.common.dto.product.ProductDto;
+import com.flopkart.common.dto.product.StockItemDto;
+import com.flopkart.common.dto.product.StockReleaseRequest;
+import com.flopkart.common.dto.product.StockReservationRequest;
 import com.flopkart.product.dto.CreateProductRequest;
 import com.flopkart.product.dto.ProductStockResponse;
 import com.flopkart.product.entity.Category;
 import com.flopkart.product.entity.Product;
+import com.flopkart.product.exception.InsufficientStockException;
 import com.flopkart.product.exception.ResourceNotFoundException;
 import com.flopkart.product.repository.CategoryRepository;
 import com.flopkart.product.repository.ProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +26,8 @@ import java.util.List;
 
 @Service
 public class ProductService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -91,6 +99,53 @@ public class ProductService {
                 product.getStockQuantity(),
                 product.getStockQuantity() > 0
         );
+    }
+
+    @Transactional
+    public void reserveStock(StockReservationRequest request) {
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Reservation request must contain at least one item");
+        }
+
+        log.info("Processing stock reservation for {} items", request.getItems().size());
+
+        // Validate and deduct atomically
+        for (StockItemDto item : request.getItems()) {
+            Product product = productRepository.findByIdWithLock(item.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + item.getProductId()));
+
+            if (product.getStockQuantity() < item.getQuantity()) {
+                log.warn("Insufficient stock for product ID {}: requested {}, available {}",
+                        item.getProductId(), item.getQuantity(), product.getStockQuantity());
+                throw new InsufficientStockException(String.format(
+                        "Insufficient stock for product '%s' (ID %d): requested %d, available %d",
+                        product.getName(), item.getProductId(), item.getQuantity(), product.getStockQuantity()));
+            }
+
+            product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+            productRepository.save(product);
+            log.info("Reserved {} units for product ID {}, remaining stock: {}",
+                    item.getQuantity(), item.getProductId(), product.getStockQuantity());
+        }
+    }
+
+    @Transactional
+    public void releaseStock(StockReleaseRequest request) {
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            log.warn("Empty stock release request received, skipping");
+            return;
+        }
+
+        log.info("Releasing stock for order '{}', {} items", request.getOrderNumber(), request.getItems().size());
+        for (StockItemDto item : request.getItems()) {
+            productRepository.findByIdWithLock(item.getProductId())
+                    .ifPresentOrElse(product -> {
+                        product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                        productRepository.save(product);
+                        log.info("Restored {} units to product ID {}, new stock: {}",
+                                item.getQuantity(), item.getProductId(), product.getStockQuantity());
+                    }, () -> log.warn("Cannot release stock: product not found with id {}", item.getProductId()));
+        }
     }
 
     public ProductDto mapToDto(Product product) {

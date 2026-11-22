@@ -3,6 +3,8 @@ package com.flopkart.product.controller;
 import com.flopkart.common.dto.ApiResponse;
 import com.flopkart.common.dto.PageResponse;
 import com.flopkart.common.dto.product.ProductDto;
+import com.flopkart.common.dto.product.StockReleaseRequest;
+import com.flopkart.common.dto.product.StockReservationRequest;
 import com.flopkart.product.dto.CreateProductRequest;
 import com.flopkart.product.dto.ProductStockResponse;
 import com.flopkart.product.service.ProductService;
@@ -48,5 +50,17 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductStockResponse>> getProductStock(@PathVariable(name = "id") Long id) {
         ProductStockResponse stock = productService.getProductStock(id);
         return ResponseEntity.ok(ApiResponse.success("Product stock retrieved successfully", stock));
+    }
+
+    @PostMapping("/reserve-stock")
+    public ResponseEntity<ApiResponse<Void>> reserveStock(@Valid @RequestBody StockReservationRequest request) {
+        productService.reserveStock(request);
+        return ResponseEntity.ok(ApiResponse.success("Stock reserved successfully", null));
+    }
+
+    @PostMapping("/release-stock")
+    public ResponseEntity<ApiResponse<Void>> releaseStock(@Valid @RequestBody StockReleaseRequest request) {
+        productService.releaseStock(request);
+        return ResponseEntity.ok(ApiResponse.success("Stock released successfully", null));
     }
 }
