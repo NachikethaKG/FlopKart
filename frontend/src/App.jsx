@@ -11,15 +11,9 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CartPage from './pages/CartPage';
-
-function OrdersPlaceholder() {
-  return (
-    <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-      <h2 className="text-2xl font-bold text-gray-900">Your Orders</h2>
-      <p className="text-gray-500 mt-2">Order tracking UI will be connected in Phase 5.5.</p>
-    </div>
-  );
-}
+import CheckoutPage from './pages/CheckoutPage';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 
 function MainRoutes() {
   const { addItem } = useCart();
@@ -43,10 +37,26 @@ function MainRoutes() {
             }
           />
           <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/orders"
             element={
               <ProtectedRoute>
-                <OrdersPlaceholder />
+                <OrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders/:orderNumber"
+            element={
+              <ProtectedRoute>
+                <OrderDetailPage />
               </ProtectedRoute>
             }
           />
