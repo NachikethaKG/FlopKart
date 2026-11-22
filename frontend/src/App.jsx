@@ -1,7 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import { Sparkles, ArrowRight, Shield, Zap, ShoppingBag } from 'lucide-react';
 
 function StorefrontHome() {
@@ -81,19 +85,57 @@ function StorefrontHome() {
   );
 }
 
+function CartPlaceholder() {
+  return (
+    <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+      <h2 className="text-2xl font-bold">Your Cart</h2>
+      <p className="text-gray-500 mt-2">Cart management UI will be connected in Phase 5.4.</p>
+    </div>
+  );
+}
+
+function OrdersPlaceholder() {
+  return (
+    <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+      <h2 className="text-2xl font-bold">Your Orders</h2>
+      <p className="text-gray-500 mt-2">Order tracking UI will be connected in Phase 5.5.</p>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <Router>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <main className="flex-1 flex flex-col">
-          <Routes>
-            <Route path="/" element={<StorefrontHome />} />
-            <Route path="*" element={<StorefrontHome />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AuthProvider>
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <Navbar />
+          <main className="flex-1 flex flex-col">
+            <Routes>
+              <Route path="/" element={<StorefrontHome />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route
+                path="/cart"
+                element={
+                  <ProtectedRoute>
+                    <CartPlaceholder />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute>
+                    <OrdersPlaceholder />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<StorefrontHome />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </AuthProvider>
     </Router>
   );
 }

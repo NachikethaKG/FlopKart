@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Package, LogOut, Menu, X, Sparkles } from 'lucide-react';
+import { ShoppingCart, Package, LogOut, Menu, X, Sparkles, Search } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Navbar({ cartCount = 0, user = null, onLogout = null }) {
+export default function Navbar({ cartCount = 0 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
+
+  const { user, logout } = useAuth();
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -15,6 +18,11 @@ export default function Navbar({ cartCount = 0, user = null, onLogout = null }) 
     } else {
       navigate('/');
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -104,18 +112,16 @@ export default function Navbar({ cartCount = 0, user = null, onLogout = null }) 
                       <Package className="w-4 h-4" />
                       My Orders
                     </Link>
-                    {onLogout && (
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          onLogout();
-                        }}
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
                   </div>
                 )}
               </div>
@@ -193,17 +199,15 @@ export default function Navbar({ cartCount = 0, user = null, onLogout = null }) 
                   >
                     My Orders
                   </Link>
-                  {onLogout && (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        onLogout();
-                      }}
-                      className="text-left px-3 py-2 text-base font-medium text-red-600 hover:bg-red-50 rounded-md"
-                    >
-                      Sign Out ({user.email})
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="text-left px-3 py-2 text-base font-medium text-red-600 hover:bg-red-50 rounded-md"
+                  >
+                    Sign Out ({user.email})
+                  </button>
                 </>
               ) : (
                 <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
