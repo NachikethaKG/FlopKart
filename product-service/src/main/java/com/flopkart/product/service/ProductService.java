@@ -7,6 +7,8 @@ import com.flopkart.common.dto.product.StockReleaseRequest;
 import com.flopkart.common.dto.product.StockReservationRequest;
 import com.flopkart.product.dto.CreateProductRequest;
 import com.flopkart.product.dto.ProductStockResponse;
+import com.flopkart.product.dto.UpdatePriceRequest;
+import com.flopkart.product.dto.UpdateStockRequest;
 import com.flopkart.product.entity.Category;
 import com.flopkart.product.entity.Product;
 import com.flopkart.product.exception.InsufficientStockException;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -146,6 +149,53 @@ public class ProductService {
                                 item.getQuantity(), item.getProductId(), product.getStockQuantity());
                     }, () -> log.warn("Cannot release stock: product not found with id {}", item.getProductId()));
         }
+    }
+
+    @Transactional
+    public ProductDto updateStock(Long id, UpdateStockRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        if (request.getQuantity() != null) {
+            if (request.getQuantity() < 0) {
+                throw new IllegalArgumentException("Stock quantity cannot be negative");
+            }
+            product.setStockQuantity(request.getQuantity());
+        } else if (request.getDelta() != null) {
+            int newQuantity = product.getStockQuantity() + request.getDelta();
+            if (newQuantity < 0) {
+                throw new IllegalArgumentException("Stock quantity cannot drop below zero");
+            }
+            product.setStockQuantity(newQuantity);
+        } else {
+            throw new IllegalArgumentException("Either delta or quantity must be provided");
+        }
+
+        Product saved = productRepository.save(product);
+        return mapToDto(saved);
+    }
+
+    @Transactional
+    public ProductDto updatePrice(Long id, UpdatePriceRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        if (request.getPrice() == null || request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be greater than zero");
+        }
+
+        product.setPrice(request.getPrice());
+        Product saved = productRepository.save(product);
+        return mapToDto(saved);
+    }
+
+    @Transactional
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        product.setActive(false);
+        productRepository.save(product);
     }
 
     public ProductDto mapToDto(Product product) {

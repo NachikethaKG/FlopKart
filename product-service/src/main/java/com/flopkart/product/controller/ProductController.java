@@ -7,6 +7,8 @@ import com.flopkart.common.dto.product.StockReleaseRequest;
 import com.flopkart.common.dto.product.StockReservationRequest;
 import com.flopkart.product.dto.CreateProductRequest;
 import com.flopkart.product.dto.ProductStockResponse;
+import com.flopkart.product.dto.UpdatePriceRequest;
+import com.flopkart.product.dto.UpdateStockRequest;
 import com.flopkart.product.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -50,6 +52,28 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductStockResponse>> getProductStock(@PathVariable(name = "id") Long id) {
         ProductStockResponse stock = productService.getProductStock(id);
         return ResponseEntity.ok(ApiResponse.success("Product stock retrieved successfully", stock));
+    }
+
+    @PatchMapping("/{id:[0-9]+}/stock")
+    public ResponseEntity<ApiResponse<ProductDto>> updateStock(
+            @PathVariable(name = "id") Long id,
+            @RequestBody UpdateStockRequest request) {
+        ProductDto updated = productService.updateStock(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Stock updated successfully", updated));
+    }
+
+    @PatchMapping("/{id:[0-9]+}/price")
+    public ResponseEntity<ApiResponse<ProductDto>> updatePrice(
+            @PathVariable(name = "id") Long id,
+            @Valid @RequestBody UpdatePriceRequest request) {
+        ProductDto updated = productService.updatePrice(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Price updated successfully", updated));
+    }
+
+    @DeleteMapping("/{id:[0-9]+}")
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable(name = "id") Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
     }
 
     @PostMapping("/reserve-stock")

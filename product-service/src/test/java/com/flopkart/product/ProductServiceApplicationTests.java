@@ -20,8 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -278,5 +277,72 @@ class ProductServiceApplicationTests {
 
         Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
         org.junit.jupiter.api.Assertions.assertEquals(35, updated.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/products/{id}/stock updates stock with delta")
+    void shouldUpdateStockWithDelta() throws Exception {
+        com.flopkart.product.dto.UpdateStockRequest request = new com.flopkart.product.dto.UpdateStockRequest(5, null);
+
+        mockMvc.perform(patch("/api/v1/products/" + testProduct.getId() + "/stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.stockQuantity").value(30));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(30, updated.getStockQuantity());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/products/{id}/stock rejects negative stock drop with 400 Bad Request")
+    void shouldRejectNegativeStockDrop() throws Exception {
+        com.flopkart.product.dto.UpdateStockRequest request = new com.flopkart.product.dto.UpdateStockRequest(-50, null);
+
+        mockMvc.perform(patch("/api/v1/products/" + testProduct.getId() + "/stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/products/{id}/price updates price")
+    void shouldUpdateProductPrice() throws Exception {
+        com.flopkart.product.dto.UpdatePriceRequest request = new com.flopkart.product.dto.UpdatePriceRequest(new BigDecimal("599.99"));
+
+        mockMvc.perform(patch("/api/v1/products/" + testProduct.getId() + "/price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.price").value(599.99));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(new BigDecimal("599.99"), updated.getPrice());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/products/{id}/price rejects non-positive price with 400 Bad Request")
+    void shouldRejectNonPositivePrice() throws Exception {
+        com.flopkart.product.dto.UpdatePriceRequest request = new com.flopkart.product.dto.UpdatePriceRequest(new BigDecimal("0.00"));
+
+        mockMvc.perform(patch("/api/v1/products/" + testProduct.getId() + "/price")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/products/{id} deactivates product")
+    void shouldDeactivateProduct() throws Exception {
+        mockMvc.perform(delete("/api/v1/products/" + testProduct.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        Product updated = productRepository.findById(testProduct.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertFalse(updated.getActive());
     }
 }
