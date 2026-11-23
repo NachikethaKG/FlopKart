@@ -31,11 +31,15 @@ public class AuthService {
             throw new EmailAlreadyExistsException("Email already registered: " + request.getEmail());
         }
 
+        String role = (request.getRole() != null && !request.getRole().trim().isEmpty())
+                ? request.getRole().trim()
+                : "ROLE_USER";
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role("ROLE_USER")
+                .role(role)
                 .build();
 
         User savedUser = userRepository.save(user);

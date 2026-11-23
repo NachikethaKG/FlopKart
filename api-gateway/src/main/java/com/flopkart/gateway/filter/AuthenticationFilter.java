@@ -57,6 +57,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String role = jwtUtil.extractRole(token);
         String email = jwtUtil.extractEmail(token);
 
+        // Restrict write operations (POST, PUT, PATCH, DELETE) on /api/v1/products/** to MANAGER
+        if (path.startsWith("/api/v1/products") && !HttpMethod.GET.equals(method)) {
+            if (!isManager(role)) {
+                return onError(exchange, "Access denied: MANAGER role required", HttpStatus.FORBIDDEN);
+            }
+        }
+
         ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                 .header("X-User-Id", userId)
                 .header("X-User-Roles", role)
@@ -77,6 +84,14 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return true;
         }
         return false;
+    }
+
+    private boolean isManager(String role) {
+        if (role == null) {
+            return false;
+        }
+        String normalized = role.trim().toUpperCase();
+        return normalized.equals("MANAGER") || normalized.equals("ROLE_MANAGER");
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus httpStatus) {

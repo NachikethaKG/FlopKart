@@ -152,4 +152,46 @@ class AuthenticationFilterTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
     }
+
+    @Test
+    @DisplayName("POST /api/v1/products with CUSTOMER token returns 403 Forbidden")
+    void shouldRejectCustomerProductWriteWithForbidden() {
+        String token = createValidToken("user-100", "customer@flopkart.com", "ROLE_USER");
+
+        MockServerHttpRequest request = MockServerHttpRequest.post("/api/v1/products")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        GatewayFilterChain chain = ex -> Mono.empty();
+
+        StepVerifier.create(authenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/products with MANAGER token passes through")
+    void shouldAllowManagerProductWrite() {
+        String token = createValidToken("mgr-1", "manager@flopkart.com", "MANAGER");
+
+        MockServerHttpRequest request = MockServerHttpRequest.post("/api/v1/products")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        AtomicBoolean chainExecuted = new AtomicBoolean(false);
+        GatewayFilterChain chain = ex -> {
+            chainExecuted.set(true);
+            assertEquals("mgr-1", ex.getRequest().getHeaders().getFirst("X-User-Id"));
+            assertEquals("MANAGER", ex.getRequest().getHeaders().getFirst("X-User-Roles"));
+            return Mono.empty();
+        };
+
+        StepVerifier.create(authenticationFilter.filter(exchange, chain))
+                .verifyComplete();
+
+        assertTrue(chainExecuted.get());
+    }
 }
