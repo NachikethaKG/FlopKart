@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # FlopKart E-Commerce Platform - Docker Compose End-to-End Smoke Test Script (PowerShell)
 # ==============================================================================
 $ErrorActionPreference = "Stop"
@@ -91,7 +91,10 @@ $productsResp = Invoke-RestMethod -Uri "$GatewayUrl/api/v1/products?page=0&size=
 $productId = $null
 
 if ($productsResp.data.content.Count -gt 0) {
-    $productId = $productsResp.data.content[0].id
+    $product = $productsResp.data.content[0]
+    $productId = $product.id
+    $productName = $product.name
+    $productPrice = $product.price
 } else {
     Write-Host "No products found. Creating test product..."
     $productBody = @{
@@ -103,6 +106,8 @@ if ($productsResp.data.content.Count -gt 0) {
     } | ConvertTo-Json
     $newProd = Invoke-RestMethod -Uri "$GatewayUrl/api/v1/products" -Method Post -Body $productBody -ContentType "application/json"
     $productId = $newProd.data.id
+    $productName = "Dockerized Headphones"
+    $productPrice = 199.99
 }
 Write-Host "✓ Product catalog operational! Selected Product ID: $productId" -ForegroundColor Green
 
@@ -112,6 +117,8 @@ Write-Host "✓ Product catalog operational! Selected Product ID: $productId" -F
 Write-Host "`n[Step 4/5] Testing Shopping Cart with Redis Session..." -ForegroundColor Yellow
 $cartItemBody = @{
     productId = $productId
+    productName = $productName
+    price = $productPrice
     quantity = 2
 } | ConvertTo-Json
 

@@ -86,6 +86,8 @@ echo -e "\n${YELLOW}[Step 3/5] Testing Product Catalog Browsing...${NC}"
 PRODUCTS_RESP=$(curl -s -X GET "${GATEWAY_URL}/api/v1/products?page=0&size=5")
 
 PRODUCT_ID=$(echo "$PRODUCTS_RESP" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2 || true)
+PRODUCT_NAME=$(echo "$PRODUCTS_RESP" | grep -o '"name":"[^"]*' | head -n1 | cut -d'"' -f4 || true)
+PRODUCT_PRICE=$(echo "$PRODUCTS_RESP" | grep -o '"price":[0-9.]*' | head -n1 | cut -d':' -f2 || true)
 
 if [ -z "$PRODUCT_ID" ]; then
   echo "No products found in database. Creating a test product..."
@@ -93,6 +95,8 @@ if [ -z "$PRODUCT_ID" ]; then
     -H "Content-Type: application/json" \
     -d '{"name":"Dockerized Headphones","description":"Wireless ANC Headphones","price":199.99,"stockQuantity":50,"category":"Electronics"}')
   PRODUCT_ID=$(echo "$PROD_CREATE_RESP" | grep -o '"id":[0-9]*' | head -n1 | cut -d':' -f2)
+  PRODUCT_NAME="Dockerized Headphones"
+  PRODUCT_PRICE="199.99"
 fi
 
 echo -e "${GREEN}✓ Product catalog operational! Selected Product ID: ${PRODUCT_ID}${NC}"
@@ -104,7 +108,7 @@ echo -e "\n${YELLOW}[Step 4/5] Testing Shopping Cart with Redis Session...${NC}"
 ADD_ITEM_RESP=$(curl -s -X POST "${GATEWAY_URL}/api/v1/cart/items" \
   -H "Authorization: Bearer ${JWT_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"productId\":${PRODUCT_ID},\"quantity\":2}")
+  -d "{\"productId\":${PRODUCT_ID},\"productName\":\"${PRODUCT_NAME}\",\"price\":${PRODUCT_PRICE},\"quantity\":2}")
 
 if ! echo "$ADD_ITEM_RESP" | grep -q '"success":true'; then
   echo -e "${RED}Failed to add item to cart: ${ADD_ITEM_RESP}${NC}"
