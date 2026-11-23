@@ -15,6 +15,19 @@ export default function Navbar({ cartCount = null }) {
 
   const displayCartCount = cartCount !== null ? cartCount : totalItemCount;
 
+  const handleCatalogClick = (e) => {
+    if (e) e.preventDefault();
+    setSearchTerm('');
+    navigate('/', { state: { resetFilters: Date.now() } });
+    window.dispatchEvent(new CustomEvent('flopkart:reset-catalog'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleMobileCatalogClick = (e) => {
+    setMobileMenuOpen(false);
+    handleCatalogClick(e);
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -35,7 +48,11 @@ export default function Navbar({ cartCount = null }) {
         <div className="flex items-center justify-between h-16 gap-4">
           
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0 group">
+          <Link
+            to="/"
+            onClick={handleCatalogClick}
+            className="flex items-center gap-2 flex-shrink-0 group"
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
               <Sparkles className="w-6 h-6" />
             </div>
@@ -67,6 +84,7 @@ export default function Navbar({ cartCount = null }) {
           <div className="hidden md:flex items-center gap-4">
             <Link
               to="/"
+              onClick={handleCatalogClick}
               className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
             >
               Catalog
@@ -189,7 +207,7 @@ export default function Navbar({ cartCount = null }) {
             <div className="flex flex-col space-y-2">
               <Link
                 to="/"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={handleMobileCatalogClick}
                 className="px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-md"
               >
                 Catalog

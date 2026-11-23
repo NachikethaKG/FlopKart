@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import ProductCard from '../components/ProductCard';
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, PackageX, Sparkles, ShoppingBag, Loader2 } from 'lucide-react';
@@ -9,6 +9,7 @@ const CATEGORIES = ['All', 'Electronics', 'Fashion', 'Books', 'Home & Kitchen'];
 export default function HomePage({ onAddToCart = null }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParam = searchParams.get('search') || '';
+  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,29 @@ export default function HomePage({ onAddToCart = null }) {
   const [pageSize, setPageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+
+  const clearFilters = () => {
+    setActiveCategory('All');
+    setSearchTerm('');
+    setSearchParams({});
+    setPage(0);
+  };
+
+  // Reset filters if navigating with resetFilters state
+  useEffect(() => {
+    if (location.state?.resetFilters) {
+      clearFilters();
+    }
+  }, [location.state]);
+
+  // Global event listener for Catalog navigation/reset
+  useEffect(() => {
+    const handleReset = () => {
+      clearFilters();
+    };
+    window.addEventListener('flopkart:reset-catalog', handleReset);
+    return () => window.removeEventListener('flopkart:reset-catalog', handleReset);
+  }, []);
 
   // Sync state if search query param changes
   useEffect(() => {
@@ -81,13 +105,6 @@ export default function HomePage({ onAddToCart = null }) {
     setPage(0);
   };
 
-  const clearFilters = () => {
-    setActiveCategory('All');
-    setSearchTerm('');
-    setSearchParams({});
-    setPage(0);
-  };
-
   return (
     <div className="flex-1 flex flex-col bg-gray-50/50">
       
@@ -106,6 +123,16 @@ export default function HomePage({ onAddToCart = null }) {
             <p className="text-sm sm:text-base text-blue-100 max-w-xl">
               Browse top electronics, apparel, and essentials powered by high-throughput PostgreSQL and Redis caches.
             </p>
+            <div className="pt-2 flex items-center justify-center md:justify-start gap-3">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="px-5 py-2.5 bg-white text-blue-700 hover:bg-blue-50 font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 group"
+              >
+                <ShoppingBag className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span>Explore Catalog</span>
+              </button>
+            </div>
           </div>
 
           {/* Quick Search Card */}
