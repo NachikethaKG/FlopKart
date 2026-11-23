@@ -86,9 +86,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const isManager = !!(user && (user.role === 'MANAGER' || user.role === 'ROLE_MANAGER'));
+
   const value = {
     user,
     token,
+    role: user?.role || null,
+    isManager,
     isAuthenticated: !!token && !!user,
     loading,
     login,

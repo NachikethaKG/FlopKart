@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ManagerRoute from './components/ManagerRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Toast from './components/Toast';
@@ -14,6 +15,7 @@ import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import ManagerDashboardPage from './pages/ManagerDashboardPage';
 
 function MainRoutes() {
   const { addItem } = useCart();
@@ -58,6 +60,14 @@ function MainRoutes() {
               <ProtectedRoute>
                 <OrderDetailPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manager"
+            element={
+              <ManagerRoute>
+                <ManagerDashboardPage />
+              </ManagerRoute>
             }
           />
           <Route path="*" element={<HomePage onAddToCart={addItem} />} />
