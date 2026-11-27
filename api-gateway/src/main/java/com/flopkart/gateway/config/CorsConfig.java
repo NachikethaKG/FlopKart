@@ -1,5 +1,6 @@
 package com.flopkart.gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -19,14 +20,22 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Global CORS filter allowing React clients (http://localhost:5173 and http://localhost:3000).
+ * Global CORS filter allowing configured origins (defaults to http://localhost:5173 and http://localhost:3000,
+ * customizable via ALLOWED_ORIGINS environment variable for live Vercel/Cloudflare deployments).
  */
 @Configuration
 public class CorsConfig {
 
+    @Value("${ALLOWED_ORIGINS:${cors.allowed-origins:http://localhost:5173,http://localhost:3000}}")
+    private String allowedOrigins;
+
     @Bean
     public WebFilter corsFilter() {
-        return new OrderedCorsWebFilter();
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        return new OrderedCorsWebFilter(origins);
     }
 
     private static class OrderedCorsWebFilter implements WebFilter, Ordered {
@@ -34,9 +43,9 @@ public class CorsConfig {
         private final UrlBasedCorsConfigurationSource source;
         private final CorsProcessor processor;
 
-        public OrderedCorsWebFilter() {
+        public OrderedCorsWebFilter(List<String> origins) {
             CorsConfiguration config = new CorsConfiguration();
-            config.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:3000"));
+            config.setAllowedOriginPatterns(origins);
             config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
             config.setAllowedHeaders(List.of("*"));
             config.setAllowCredentials(true);
